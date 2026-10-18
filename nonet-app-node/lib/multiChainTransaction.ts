@@ -294,8 +294,8 @@ export async function getMultiChainBalance(
  * @returns Gas price in Gwei as string
  */
 export async function getChainGasPrice(chainId: string): Promise<string> {
+  const chain = getChainById(chainId);
   try {
-    const chain = getChainById(chainId);
     if (!chain) {
       throw new Error(`Unsupported chain: ${chainId}`);
     }
@@ -305,7 +305,7 @@ export async function getChainGasPrice(chainId: string): Promise<string> {
     const gasPrice = feeData.gasPrice || 0n;
     
     // Convert to Gwei
-    return formatEther(gasPrice * 1000000000n);
+    return ethers.formatUnits(gasPrice, 'gwei');
   } catch (error) {
     console.error('Failed to get gas price:', error);
     return chain?.gasSettings?.defaultGasPrice || '20'; // Default fallback

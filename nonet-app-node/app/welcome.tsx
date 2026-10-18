@@ -102,7 +102,7 @@ export default function WelcomePage(): React.JSX.Element {
           <View style={styles.logoContainer}>
             <Text style={styles.logoIcon}>🌐</Text>
           </View>
-          <Text style={styles.appName}>NoNet</Text>
+          <Text style={styles.appName}>AirPay</Text>
         </View>
 
         {/* Create Wallet Button */}

@@ -73,7 +73,7 @@ export const NeoBrutalismTypography = {
     normal: 1.2,
     relaxed: 1.4,
   },
-};
+} as const;
 
 export const NeoBrutalismSpacing = {
   // Spacing Scale - Bold and Generous

@@ -32,10 +32,15 @@ export const NeoBrutalButton: React.FC<NeoBrutalButtonProps> = ({
   style,
   textStyle,
 }) => {
-  const getButtonStyle = () => {
-    const baseStyle = {
+  const getButtonStyle = (): ViewStyle => {
+    const sizeStyle: ViewStyle = size === 'small'
+      ? styles.buttonSmall
+      : size === 'large'
+        ? styles.buttonLarge
+        : styles.buttonMedium;
+    const baseStyle: ViewStyle = {
       ...styles.buttonBase,
-      ...styles[`button${size.charAt(0).toUpperCase() + size.slice(1)}` as keyof typeof styles],
+      ...sizeStyle,
     };
 
     switch (variant) {
@@ -71,10 +76,15 @@ export const NeoBrutalButton: React.FC<NeoBrutalButtonProps> = ({
     }
   };
 
-  const getTextStyle = () => {
-    const baseTextStyle = {
+  const getTextStyle = (): TextStyle => {
+    const sizeTextStyle: TextStyle = size === 'small'
+      ? styles.buttonTextSmall
+      : size === 'large'
+        ? styles.buttonTextLarge
+        : styles.buttonTextMedium;
+    const baseTextStyle: TextStyle = {
       ...styles.buttonText,
-      ...styles[`buttonText${size.charAt(0).toUpperCase() + size.slice(1)}` as keyof typeof styles],
+      ...sizeTextStyle,
     };
 
     return {
@@ -113,8 +123,8 @@ export const NeoBrutalCard: React.FC<NeoBrutalCardProps> = ({
   variant = 'primary',
   style,
 }) => {
-  const getCardStyle = () => {
-    const baseStyle = styles.cardBase;
+  const getCardStyle = (): ViewStyle => {
+    const baseStyle: ViewStyle = styles.cardBase;
 
     switch (variant) {
       case 'primary':
@@ -209,8 +219,8 @@ export const NeoBrutalBadge: React.FC<NeoBrutalBadgeProps> = ({
   style,
   textStyle,
 }) => {
-  const getBadgeStyle = () => {
-    const baseStyle = styles.badgeBase;
+  const getBadgeStyle = (): ViewStyle => {
+    const baseStyle: ViewStyle = styles.badgeBase;
 
     switch (variant) {
       case 'success':
@@ -263,8 +273,8 @@ export const NeoBrutalDivider: React.FC<NeoBrutalDividerProps> = ({
   thickness = 'medium',
   style,
 }) => {
-  const getDividerStyle = () => {
-    const baseStyle = styles.dividerBase;
+  const getDividerStyle = (): ViewStyle => {
+    const baseStyle: ViewStyle = styles.dividerBase;
     
     const thicknessMap = {
       thin: NeoBrutalismBorders.thin,

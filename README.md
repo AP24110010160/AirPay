@@ -1,4 +1,4 @@
-# 🌐 NONET - Decentralized Mesh Network for Offline Blockchain Transactions
+# 🌐 AIRPAY - Decentralized Mesh Network for Offline Blockchain Transactions
 
 > **Revolutionary application enabling cryptocurrency transactions through Bluetooth Low Energy mesh networking - no internet required!**
 
@@ -9,9 +9,9 @@
 
 ---
 
-## 🚀 What is NONET?
+## 🚀 What is AirPay?
 
-NONET is a groundbreaking mobile application that enables **offline cryptocurrency transactions** using Bluetooth Low Energy (BLE) mesh networking. When you don't have internet access, NONET creates a peer-to-peer network with nearby devices, allowing your transaction to "hop" through multiple devices until it reaches someone with internet connectivity who can broadcast it to the blockchain.
+AirPay is a groundbreaking mobile application that enables **offline cryptocurrency transactions** using Bluetooth Low Energy (BLE) mesh networking. When you don't have internet access, AirPay creates a peer-to-peer network with nearby devices, allowing your transaction to "hop" through multiple devices until it reaches someone with internet connectivity who can broadcast it to the blockchain.
 
 ### ⚡ Key Features
 
@@ -45,8 +45,8 @@ Android Studio (for Android)
 1. **Clone the Repository**
 
    ```bash
-   git clone https://github.com/your-username/nonet.git
-   cd nonet
+   git clone https://github.com/AP24110010160/AirPay.git
+   cd AirPay
    ```
 
 2. **Navigate to App Directory**
@@ -175,7 +175,7 @@ Blockchain integration layer:
 
 ### How Mesh Networking Works
 
-NONET implements a custom protocol over Bluetooth Low Energy (BLE) to create a mesh network:
+AirPay implements a custom protocol over Bluetooth Low Energy (BLE) to create a decentralized mesh network:
 
 #### 1. **Packet Structure**
 
@@ -199,7 +199,17 @@ const DATA_PER_CHUNK = 8;
 const MAX_PAYLOAD_SIZE = HEADER_SIZE + DATA_PER_CHUNK;
 ```
 
-#### 3. **Network Topology**
+#### 3. **Network Topology & Flow**
+
+```mermaid
+flowchart LR
+    A["📱 Sender (Offline)"] -- "BLE Chunks (GAP Adv)" --> B["📱 Relay Node (Offline)"]
+    B -- "BLE Chunks (GAP Adv)" --> C["🌐 Gateway Node (Online)"]
+    C -- "EIP-3009 Relayer RPC" --> D[("⛓️ Flow EVM Blockchain")]
+    D -- "Tx Confirmed & Mined" --> C
+    C -- "BLE ACK Packet" --> B
+    B -- "BLE ACK Packet" --> A
+```
 
 ```
 [Device A] --BLE--> [Device B] --BLE--> [Device C] --Internet--> [Blockchain]
@@ -255,7 +265,7 @@ Each device maintains a master state of all active messages:
 
 #### EIP-3009 Meta-Transactions
 
-NONET implements EIP-3009 for gasless transactions:
+AirPay implements EIP-3009 for gasless transactions:
 
 ```solidity
 function transferWithAuthorization(
@@ -293,7 +303,7 @@ function transferWithAuthorization(
 ### 3. **Mesh Broadcasting**
 
 - Transaction fragments broadcast via BLE
-- Nearby NONET devices automatically relay
+- Nearby AirPay devices automatically relay
 - Continues until reaching internet-connected device
 
 ### 4. **Blockchain Submission**
@@ -338,7 +348,7 @@ The BLE protocol can be modified in `utils/bleUtils.ts`:
 
 ### UI Customization
 
-NONET uses a modern design system (`components/NeoBrutalismComponents.tsx`):
+AirPay uses a modern design system (`components/NeoBrutalismComponents.tsx`):
 
 - Clean typography
 - Intuitive color scheme

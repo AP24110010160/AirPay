@@ -189,7 +189,7 @@ export const TransactionLoader: React.FC<TransactionLoaderProps> = ({
   transactionData,
 }) => {
   const { userWalletAddress, walletData } = useWallet();
-  const { broadcastMessage, masterState } = useBle();
+  const { broadcastMessage, masterState, stateVersion } = useBle();
   const [currentStep, setCurrentStep] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
@@ -281,7 +281,7 @@ export const TransactionLoader: React.FC<TransactionLoaderProps> = ({
 
   // Monitor master state for transaction completion
   useEffect(() => {
-    if (broadcastId && masterState.has(broadcastId)) {
+    if (broadcastId !== null && masterState.has(broadcastId)) {
       const state = masterState.get(broadcastId);
       if (state && state.isComplete && state.isAck) {
         // Transaction is complete and acknowledged - stop broadcasting
@@ -293,7 +293,7 @@ export const TransactionLoader: React.FC<TransactionLoaderProps> = ({
         resumeTransactionFlow();
       }
     }
-  }, [masterState, broadcastId, resumeTransactionFlow]);
+  }, [masterState, broadcastId, resumeTransactionFlow, stateVersion]);
 
   // STRICT Safety check: prevent completion if still waiting for confirmation
   useEffect(() => {
@@ -434,9 +434,7 @@ export const TransactionLoader: React.FC<TransactionLoaderProps> = ({
       }
 
       // Convert amount to wei (assuming 18 decimals)
-      const valueInWei = (
-        BigInt(transactionData.amount) * BigInt(10 ** 18)
-      ).toString();
+      const valueInWei = ethers.parseUnits(transactionData.amount, 18).toString();
 
       // Create real EIP-3009 signature using wallet's private key
       const realSignature = await createTransferWithAuthorizationSignature(
@@ -478,25 +476,12 @@ export const TransactionLoader: React.FC<TransactionLoaderProps> = ({
       // Start broadcasting the transaction payload
       try {
         const payloadString = JSON.stringify(transactionPayload);
-        await broadcastMessage(payloadString);
+        const newId = await broadcastMessage(payloadString);
+        setBroadcastId(newId);
+        console.log("🚀 Started broadcasting transaction with ID:", newId);
         setIsBroadcasting(true);
         setShouldPauseFlow(true); // Pause the flow here
         setIsWaitingForConfirmation(true); // Set waiting for confirmation
-
-        // Find the broadcast ID from the master state
-        // Since broadcastMessage creates a new entry, we need to find the latest one
-        const states = Array.from(masterState.entries());
-        const latestState = states.find(
-          ([_, state]) => state.fullMessage === payloadString && !state.isAck
-        );
-
-        if (latestState) {
-          setBroadcastId(latestState[0]);
-          console.log(
-            "🚀 Started broadcasting transaction with ID:",
-            latestState[0]
-          );
-        }
       } catch (error) {
         console.error("❌ Error broadcasting transaction payload:", error);
         // Reset flags on error

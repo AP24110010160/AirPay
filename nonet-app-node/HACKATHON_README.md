@@ -1,4 +1,4 @@
-# 🚀 NONET - ETH DELHI 2024 HACKATHON
+# 🚀 AIRPAY - ETH DELHI 2024 HACKATHON
 
 ## 🎯 **DECENTRALIZED MESH NETWORK FOR OFFLINE CRYPTO TRANSACTIONS**
 
@@ -6,9 +6,9 @@
 
 ---
 
-## ⚡ **WHAT IS NONET?**
+## ⚡ **WHAT IS AIRPAY?**
 
-**NONET** is a revolutionary React Native application that enables **offline cryptocurrency transactions** through mesh networking technology. Built for ETH Delhi 2024, it showcases the future of decentralized finance without internet dependency.
+**AirPay** is a revolutionary React Native application that enables **offline cryptocurrency transactions** through mesh networking technology. Built for ETH Delhi 2024, it showcases the future of decentralized finance without internet dependency.
 
 ### 🔥 **KEY FEATURES**
 
@@ -85,10 +85,10 @@ Android Studio / Xcode
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-team/nonet-eth-delhi
+git clone https://github.com/AP24110010160/AirPay.git
 
 # Navigate to project
-cd nonet-eth-delhi/nonet-app-node
+cd AirPay/nonet-app-node
 
 # Install dependencies
 npm install

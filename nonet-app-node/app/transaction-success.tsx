@@ -37,11 +37,11 @@ export default function TransactionSuccessPage(): React.JSX.Element {
   }>();
 
   const handleGoHome = () => {
-    router.replace('/(tabs)/');
+    router.replace('/(tabs)');
   };
 
   const handleNewTransaction = () => {
-    router.replace('/(tabs)/');
+    router.replace('/(tabs)');
   };
 
   useEffect(() => {

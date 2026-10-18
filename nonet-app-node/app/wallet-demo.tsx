@@ -44,7 +44,7 @@ export default function WalletDemo(): React.JSX.Element {
   const handleSignMessage = () => {
     if (walletData?.privateKey) {
       try {
-        const message = "Hello from NoNet! This is a test signature.";
+        const message = "Hello from AirPay! This is a test signature.";
         const signature = signMessage(message, walletData.privateKey);
         setSignedMessage(signature);
       } catch (error) {

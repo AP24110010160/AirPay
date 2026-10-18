@@ -65,7 +65,7 @@ export default function Show(): React.JSX.Element {
         </Text>
         {walletData && (
           <Text style={styles.createdText}>
-            Created: {walletData.createdAt.toLocaleDateString()}
+            Created: {new Date(walletData.createdAt).toLocaleDateString()}
           </Text>
         )}
       </View>

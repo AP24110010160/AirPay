@@ -70,6 +70,8 @@ const STORAGE_KEYS = {
   SCANNED_ADDRESSES: '@scanned_addresses',
 };
 
+import { ethers } from 'ethers';
+
 // Initialize elliptic curve (secp256k1 - same as Bitcoin/Ethereum)
 const ec = new EC('secp256k1');
 
@@ -78,19 +80,11 @@ const generateRealWallet = (): { address: string; privateKey: string; publicKey:
   try {
     console.log('🔐 Starting ECDSA wallet generation...');
     
-    // Generate a random private key (32 bytes)
-    const keyPair = ec.genKeyPair();
-    
-    // Get private key as hex string
-    const privateKeyHex = keyPair.getPrivate('hex').padStart(64, '0');
-    const privateKey = `0x${privateKeyHex}`;
-    
-    // Get public key (uncompressed format: 04 + x + y coordinates)
-    const publicKeyHex = keyPair.getPublic('hex');
-    const publicKey = `0x${publicKeyHex}`;
-    
-    // Generate Ethereum address from public key
-    const address = generateEthereumAddress(publicKeyHex);
+    // Generate standard Ethereum wallet using ethers (proper keccak256 address derivation)
+    const wallet = ethers.Wallet.createRandom();
+    const address = wallet.address;
+    const privateKey = wallet.privateKey;
+    const publicKey = wallet.signingKey.publicKey;
     
     console.log('✅ Wallet generated successfully');
     console.log('Private key length:', privateKey.length);
@@ -108,23 +102,11 @@ const generateRealWallet = (): { address: string; privateKey: string; publicKey:
   }
 };
 
-// Generate Ethereum address from public key
+// Generate Ethereum address from public key using ethers
 const generateEthereumAddress = (publicKeyHex: string): string => {
   try {
-    // Remove '04' prefix if present (uncompressed public key indicator)
-    const cleanPublicKey = publicKeyHex.startsWith('04') ? publicKeyHex.slice(2) : publicKeyHex;
-    
-    // Convert hex to word array for crypto-js
-    const publicKeyWords = CryptoJS.enc.Hex.parse(cleanPublicKey);
-    
-    // Calculate Keccak-256 hash
-    const hash = CryptoJS.SHA3(publicKeyWords, { outputLength: 256 });
-    
-    // Take last 20 bytes (40 hex characters) as address
-    const addressHex = hash.toString(CryptoJS.enc.Hex).slice(-40);
-    
-    // Add '0x' prefix and apply checksum
-    return applyEthereumChecksum(`0x${addressHex}`);
+    const cleanPublicKey = publicKeyHex.startsWith('0x') ? publicKeyHex : `0x${publicKeyHex}`;
+    return ethers.computeAddress(cleanPublicKey);
   } catch (error) {
     console.error('Error generating Ethereum address:', error);
     throw new Error('Failed to generate Ethereum address');
@@ -134,19 +116,7 @@ const generateEthereumAddress = (publicKeyHex: string): string => {
 // Apply EIP-55 checksum to Ethereum address
 const applyEthereumChecksum = (address: string): string => {
   try {
-    const addressLower = address.toLowerCase().replace('0x', '');
-    const hash = CryptoJS.SHA3(addressLower, { outputLength: 256 }).toString(CryptoJS.enc.Hex);
-    
-    let checksumAddress = '0x';
-    for (let i = 0; i < addressLower.length; i++) {
-      if (parseInt(hash[i], 16) >= 8) {
-        checksumAddress += addressLower[i].toUpperCase();
-      } else {
-        checksumAddress += addressLower[i];
-      }
-    }
-    
-    return checksumAddress;
+    return ethers.getAddress(address);
   } catch (error) {
     console.error('Error applying checksum:', error);
     return address; // Return original if checksum fails
@@ -156,16 +126,9 @@ const applyEthereumChecksum = (address: string): string => {
 // Utility functions for wallet operations
 const validatePrivateKey = (privateKey: string): boolean => {
   try {
-    // Remove 0x prefix if present
-    const cleanKey = privateKey.replace('0x', '');
-    
-    // Check if it's a valid hex string of 64 characters (32 bytes)
-    if (cleanKey.length !== 64) return false;
-    if (!/^[0-9a-fA-F]+$/.test(cleanKey)) return false;
-    
-    // Try to create a key pair from it
-    const keyPair = ec.keyFromPrivate(cleanKey, 'hex');
-    return keyPair.validate().result;
+    const cleanKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+    new ethers.Wallet(cleanKey);
+    return true;
   } catch {
     return false;
   }
@@ -173,17 +136,8 @@ const validatePrivateKey = (privateKey: string): boolean => {
 
 const deriveAddressFromPrivateKey = (privateKey: string): string => {
   try {
-    // Remove 0x prefix if present
-    const cleanKey = privateKey.replace('0x', '');
-    
-    // Create key pair from private key
-    const keyPair = ec.keyFromPrivate(cleanKey, 'hex');
-    
-    // Get public key
-    const publicKeyHex = keyPair.getPublic('hex');
-    
-    // Generate address from public key
-    return generateEthereumAddress(publicKeyHex);
+    const cleanKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+    return ethers.computeAddress(cleanKey);
   } catch (error) {
     console.error('Error deriving address:', error);
     throw new Error('Invalid private key');

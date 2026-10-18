@@ -1,50 +1,78 @@
-# Welcome to your Expo app 👋
+# 📱 AirPay Mobile Node
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+The mobile client for **AirPay** — a decentralized Bluetooth Low Energy (BLE) mesh network client enabling gasless, offline cryptocurrency transactions across EVM blockchains (Flow EVM, Hedera, Ethereum).
 
-## Get started
+---
 
-1. Install dependencies
+## ⚡ Core Architecture
 
-   ```bash
-   npm install
-   ```
+- **React Native & Expo SDK 54**: Modern mobile framework with file-based routing (`expo-router`).
+- **BLE Mesh Engine (`contexts/BleContext.tsx`)**:
+  - Operates as both BLE Peripheral (advertising fragmented 11-byte payloads) and BLE Central (scanning for peer packets).
+  - Multi-hop chunk relaying and automatic ACK response propagation.
+- **Offline Cryptographic Signatures (`contexts/WalletContext.tsx`)**:
+  - Non-custodial ECDSA wallet generation with Keccak-256 address derivation.
+  - Generates offline EIP-3009 `transferWithAuthorization` signatures.
+- **Relayer & On-Chain Settlement (`lib/multiChainTransaction.ts`)**:
+  - Internet-connected gateway nodes automatically submit transactions to Flow EVM Testnet (`0xc7a5Fd47Bc5725600E03124263056C897fb96b6c`).
+- **Neo-Brutalism UI System (`components/NeoBrutalismComponents.tsx`)**:
+  - High-contrast, brutalist design system tailored for fast, clear offline transaction management.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🚀 Quick Start
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+### 1. Install Dependencies
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Start Expo Development Server
+```bash
+npm start
+```
 
-## Learn more
+### 3. Run on Platforms
+```bash
+# Run on connected Android device or emulator
+npm run android
 
-To learn more about developing your project with Expo, look at the following resources:
+# Run on Web (for UI component testing)
+npm run web
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+---
 
-## Join the community
+## 📋 Required Permissions
 
-Join our community of developers creating universal apps.
+The app requests:
+- **Bluetooth Scan & Advertise** (`BLUETOOTH_SCAN`, `BLUETOOTH_ADVERTISE`, `BLUETOOTH_CONNECT` on Android 12+)
+- **Location Access** (`ACCESS_FINE_LOCATION`) required by Android OS for BLE beacon discovery
+- **Camera** (`CAMERA`) for QR code address scanning
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+## 📂 Project Structure
+
+```
+nonet-app-node/
+├── app/                        # Expo Router screens
+│   ├── (tabs)/
+│   │   ├── index.tsx          # Dashboard & Wallet Balance
+│   │   ├── mesh.tsx           # BLE Mesh Network Status & Nodes
+│   │   └── show.tsx           # Transaction History & Receipts
+│   ├── transaction.tsx        # Offline Transaction Sender
+│   ├── welcome.tsx            # Welcome & Onboarding
+│   └── wallet-demo.tsx        # Wallet Key Management
+├── components/                # UI Components
+│   ├── NeoBrutalismComponents.tsx
+│   └── TransactionLoader.tsx  # Broadcast & Mesh ACK tracker
+├── contexts/                  # React State Contexts
+│   ├── BleContext.tsx         # BLE Mesh networking engine
+│   └── WalletContext.tsx      # Secure wallet & signature generation
+├── lib/                       # Blockchain & Relayer interaction
+│   └── multiChainTransaction.ts
+└── utils/                     # BLE byte encoding & OS permissions
+    ├── bleUtils.ts
+    └── permissions.ts
+```

@@ -24,6 +24,7 @@ import {
   CONTRACT_ABI,
   TransactionPayload,
 } from "../constants/contracts";
+import { requestBluetoothPermissions } from "../utils/permissions";
 
 // --- Real Blockchain Transaction Submission ---
 const submitTransactionToBlockchain = async (
@@ -172,9 +173,10 @@ interface BleContextType {
   hasInternet: boolean;
   masterState: Map<number, MessageState>;
   broadcastQueue: Map<number, Uint8Array[]>;
+  stateVersion: number;
 
   // Actions
-  broadcastMessage: (message: string) => Promise<void>;
+  broadcastMessage: (message: string) => Promise<number>;
   startBroadcasting: () => void;
   stopBroadcasting: () => void;
   clearAllAndStop: () => Promise<void>;
@@ -199,7 +201,7 @@ interface BleProviderProps {
 
 export const BleProvider: React.FC<BleProviderProps> = ({ children }) => {
   const [isBroadcasting, setIsBroadcasting] = useState(false);
-  const [, forceRerender] = useState(0);
+  const [stateVersion, setStateVersion] = useState(0);
 
   // Use NetInfo to get real network connectivity status
   const netInfo = useNetInfo();
@@ -220,7 +222,7 @@ export const BleProvider: React.FC<BleProviderProps> = ({ children }) => {
 
   // Force update function for UI re-renders
   const forceUpdate = () => {
-    forceRerender((n) => n + 1);
+    setStateVersion((n) => n + 1);
   };
 
   // Handle incoming BLE chunks
@@ -286,8 +288,8 @@ export const BleProvider: React.FC<BleProviderProps> = ({ children }) => {
 
       if (hasInternet && !entry.isAck) {
         handleApiResponse(id, fullMessage);
-      } else if (!hasInternet) {
-        // Also ensure re-broadcasted chunks are in order
+      } else if (!hasInternet || entry.isAck) {
+        // Also ensure re-broadcasted chunks are in order (relay ACKs even if node has internet)
         const orderedChunks = [];
         for (let i = 1; i <= entry.totalChunks; i++) {
           orderedChunks.push(entry.chunks.get(i)!);
@@ -328,14 +330,26 @@ export const BleProvider: React.FC<BleProviderProps> = ({ children }) => {
     }
   };
 
+  // We need an active flag to securely break the async loop
+  const loopActiveRef = useRef<boolean>(false);
+
   // Start the master broadcast loop
   const startMasterBroadcastLoop = () => {
+    if (loopActiveRef.current) return; // Prevent multiple loops
+    loopActiveRef.current = true;
     setIsBroadcasting(true);
-    if (masterIntervalRef.current) clearInterval(masterIntervalRef.current);
+    
+    // Clear any leftover interval just in case
+    if (masterIntervalRef.current) {
+      clearInterval(masterIntervalRef.current);
+      clearTimeout(masterIntervalRef.current);
+    }
 
     broadcastCursorRef.current = { queueIndex: 0, chunkIndex: 0 };
 
-    masterIntervalRef.current = setInterval(() => {
+    const runLoop = async () => {
+      if (!loopActiveRef.current) return;
+
       const entries = Array.from(broadcastQueueRef.current.entries());
       if (entries.length === 0) {
         stopMasterBroadcastLoop();
@@ -349,13 +363,17 @@ export const BleProvider: React.FC<BleProviderProps> = ({ children }) => {
       if (!chunksToBroadcast || chunksToBroadcast.length === 0) {
         broadcastQueueRef.current.delete(currentId);
         broadcastCursorRef.current = { queueIndex: 0, chunkIndex: 0 };
+        if (loopActiveRef.current) {
+           masterIntervalRef.current = setTimeout(runLoop, 400) as any;
+        }
         return;
       }
 
       if (chunkIndex >= chunksToBroadcast.length) chunkIndex = 0;
 
       try {
-        broadcastOverBle(chunksToBroadcast[chunkIndex]);
+        // CRUCIAL: Await the broadcast to prevent crashing Android's Bluetooth stack
+        await broadcastOverBle(chunksToBroadcast[chunkIndex]);
       } catch (e) {
         console.error("broadcast error", e);
       }
@@ -369,13 +387,23 @@ export const BleProvider: React.FC<BleProviderProps> = ({ children }) => {
 
       broadcastCursorRef.current = { queueIndex, chunkIndex };
       forceUpdate();
-    }, 250);
+
+      if (loopActiveRef.current) {
+        // 400ms interval allows the Bluetooth Radio enough time to scan AND advertise
+        masterIntervalRef.current = setTimeout(runLoop, 400) as any;
+      }
+    };
+
+    // Kickoff
+    runLoop();
   };
 
   // Stop the master broadcast loop
   const stopMasterBroadcastLoop = () => {
+    loopActiveRef.current = false;
     if (masterIntervalRef.current) {
       clearInterval(masterIntervalRef.current);
+      clearTimeout(masterIntervalRef.current);
       masterIntervalRef.current = null;
     }
     stopBleBroadcast();
@@ -385,7 +413,7 @@ export const BleProvider: React.FC<BleProviderProps> = ({ children }) => {
   };
 
   // Broadcast a new message
-  const broadcastMessage = async (message: string) => {
+  const broadcastMessage = async (message: string): Promise<number> => {
     try {
       const chunks = encodeMessageToChunks(message, { isAck: false });
       const id = decodeSingleChunk(chunks[0])!.id;
@@ -402,6 +430,7 @@ export const BleProvider: React.FC<BleProviderProps> = ({ children }) => {
       masterStateRef.current.set(id, newState);
       forceUpdate();
       addToBroadcastQueue(id, chunks);
+      return id;
     } catch (err) {
       throw err;
     }
@@ -475,7 +504,9 @@ export const BleProvider: React.FC<BleProviderProps> = ({ children }) => {
     setTimeout(() => {
       try {
         // Create a new BleManager instance
-        managerRef.current = new BleManager();
+        if (Platform.OS !== "web") {
+          managerRef.current = new BleManager();
+        }
         // Start listening again
         stopScannerRef.current = listenOverBle(
           managerRef.current,
@@ -490,24 +521,38 @@ export const BleProvider: React.FC<BleProviderProps> = ({ children }) => {
 
   // Initialize BLE on mount
   useEffect(() => {
-    managerRef.current = new BleManager();
-    if (Platform.OS === "android") {
-      try {
-        if (BleAdvertiser && (BleAdvertiser as any).setCompanyId) {
-          (BleAdvertiser as any).setCompanyId(0xffff);
-        }
-      } catch (e) {
-        console.error("BLE advertiser init error:", e);
-      }
-    }
+    let isMounted = true;
 
-    // Start listening for BLE messages - this runs continuously in the background
-    stopScannerRef.current = listenOverBle(
-      managerRef.current,
-      handleIncomingChunk
-    );
+    const setupBle = async () => {
+      // First, request all necessary runtime permissions before starting anything
+      await requestBluetoothPermissions();
+
+      if (!isMounted) return;
+
+      if (Platform.OS !== "web") {
+        managerRef.current = new BleManager();
+      }
+      if (Platform.OS === "android") {
+        try {
+          if (BleAdvertiser && (BleAdvertiser as any).setCompanyId) {
+            (BleAdvertiser as any).setCompanyId(0xffff);
+          }
+        } catch (e) {
+          console.error("BLE advertiser init error:", e);
+        }
+      }
+
+      // Start listening for BLE messages - this runs continuously in the background
+      stopScannerRef.current = listenOverBle(
+        managerRef.current,
+        handleIncomingChunk
+      );
+    };
+
+    setupBle();
 
     return () => {
+      isMounted = false;
       try {
         stopScannerRef.current?.();
       } catch {}
@@ -530,6 +575,7 @@ export const BleProvider: React.FC<BleProviderProps> = ({ children }) => {
     hasInternet,
     masterState: masterStateRef.current,
     broadcastQueue: broadcastQueueRef.current,
+    stateVersion,
 
     // Actions
     broadcastMessage,
